@@ -9,9 +9,166 @@ import sqlite3
 import datetime
 from types import SimpleNamespace
 from cravat.constants import liftover_chain_paths
+from types import SimpleNamespace
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('path',
+                    help=argparse.SUPPRESS)
+parser.add_argument('input',
+                    help='path to input file')
+parser.add_argument('-a',
+                    nargs="+",
+                    dest='annotators',
+                    help='annotators to run')
+parser.add_argument('-e',
+                    nargs='+',
+                    dest='excludes',
+                    help='annotators to exclude')
+parser.add_argument('-n',
+                    dest='run_name',
+                    help='name of cravat run')
+parser.add_argument('-d',
+                    dest='output_dir',
+                    default=None,
+                    help='directory for output files')
+parser.add_argument('--stc',
+                    dest='stc',
+                    action='store_true',
+                    default=False,
+                    help='starts with converter')
+parser.add_argument('--stm',
+                    dest='stm',
+                    action='store_true',
+                    default=False,
+                    help='starts with gene mapper')
+parser.add_argument('--sta',
+                    dest='sta',
+                    action='store_true',
+                    default=False,
+                    help='starts with annotator(s)')
+parser.add_argument('--stg',
+                    dest='stg',
+                    action='store_true',
+                    default=False,
+                    help='starts with aggregator')
+parser.add_argument('--stp',
+                    dest='stp',
+                    action='store_true',
+                    default=False,
+                    help='starts with post-aggregator')
+parser.add_argument('--str',
+                    dest='str',
+                    action='store_true',
+                    default=False,
+                    help='starts with reporter')
+parser.add_argument('--rc',
+                    dest='rc',
+                    action='store_true',
+                    default=False,
+                    help='forces re-running of converter if it is in the run chain.')
+parser.add_argument('--rm',
+                    dest='rm',
+                    action='store_true',
+                    default=False,
+                    help='forces re-running of gene mapper if it is in the run chain.')
+parser.add_argument('--ra',
+                    dest='ra',
+                    action='store_true',
+                    default=False,
+                    help='forces re-running of annotator if it is in the run chain.')
+parser.add_argument('--rg',
+                    dest='rg',
+                    action='store_true',
+                    default=False,
+                    help='forces re-running of aggregator if it is in the run chain.')
+parser.add_argument('--rp',
+                    dest='rp',
+                    action='store_true',
+                    default=False,
+                    help='forces re-running of post-aggregator if it is in the run chain.')
+parser.add_argument('--ec',
+                    dest='ec',
+                    action='store_true',
+                    default=False,
+                    help='ends after converter.')
+parser.add_argument('--em',
+                    dest='em',
+                    action='store_true',
+                    default=False,
+                    help='ends after gene mapper.')
+parser.add_argument('--ea',
+                    dest='ea',
+                    action='store_true',
+                    default=False,
+                    help='ends after annotator(s).')
+parser.add_argument('--sc',
+                    dest='sc',
+                    action='store_true',
+                    default=False,
+                    help='skips converter.')
+parser.add_argument('--sm',
+                    dest='sm',
+                    action='store_true',
+                    default=False,
+                    help='skips gene mapper.')
+parser.add_argument('--sa',
+                    dest='sa',
+                    action='store_true',
+                    default=False,
+                    help='skips annotators.')
+parser.add_argument('--sg',
+                    dest='sg',
+                    action='store_true',
+                    default=False,
+                    help='skips aggregator.')
+parser.add_argument('--sp',
+                    dest='sp',
+                    action='store_true',
+                    default=False,
+                    help='skips post-aggregator.')
+parser.add_argument('--sr',
+                    dest='sr',
+                    action='store_true',
+                    default=False,
+                    help='skips reporter.')
+parser.add_argument('-c',
+                    dest='conf',
+                    help='path to a conf file')
+parser.add_argument('--cs',
+                    dest='confs',
+                    help='configuration string')
+parser.add_argument('-v', 
+                    dest='verbose',
+                    action='store_true',
+                    default=False,
+                    help='verbose')
+parser.add_argument('-t',
+                    nargs='+',
+                    dest='reports',
+                    help='report types. If omitted, default one in cravat.yml is used.')
+parser.add_argument('-l',
+                    dest='liftover',
+                    choices=['hg38']+list(liftover_chain_paths.keys()),
+                    default='hg38',
+                    help='reference genome of input. CRAVAT will lift over to hg38 if needed.')
+parser.add_argument('-x',
+                    dest='cleandb',
+                    action='store_true',
+                    help='deletes the existing result database and ' +
+                            'creates a new one.')
+
+da = SimpleNamespace(**util.get_argument_parser_defaults(parser))
 
 class Cravat (object):
-    def __init__ (self, cmd_args):
+    def __init__ (self,
+                  input_path,
+                  annotators=default_args.annotators,
+                  excludes = default_args.excludes,
+                  run_name = default_args.run_name,
+                  output_dir = default_args.
+
+                 ):
         self.runlevels = {'converter': 1, 
             'mapper': 2, 
             'annotator': 3, 
@@ -25,157 +182,80 @@ class Cravat (object):
         self.should_run_reporter = True
         self.pythonpath = sys.executable
         self.annotators = {}
-        parser = argparse.ArgumentParser()
-        parser.add_argument('path',
-                            help=argparse.SUPPRESS)
-        parser.add_argument('input',
-                            help='path to input file')
-        parser.add_argument('-a',
-                            nargs="+",
-                            dest='annotators',
-                            help='annotators to run')
-        parser.add_argument('-e',
-                            nargs='+',
-                            dest='excludes',
-                            help='annotators to exclude')
-        parser.add_argument('-n',
-                            dest='run_name',
-                            help='name of cravat run')
-        parser.add_argument('-d',
-                            dest='output_dir',
-                            default=None,
-                            help='directory for output files')
-        parser.add_argument('--stc',
-                            dest='stc',
-                            action='store_true',
-                            default=False,
-                            help='starts with converter')
-        parser.add_argument('--stm',
-                            dest='stm',
-                            action='store_true',
-                            default=False,
-                            help='starts with gene mapper')
-        parser.add_argument('--sta',
-                            dest='sta',
-                            action='store_true',
-                            default=False,
-                            help='starts with annotator(s)')
-        parser.add_argument('--stg',
-                            dest='stg',
-                            action='store_true',
-                            default=False,
-                            help='starts with aggregator')
-        parser.add_argument('--stp',
-                            dest='stp',
-                            action='store_true',
-                            default=False,
-                            help='starts with post-aggregator')
-        parser.add_argument('--str',
-                            dest='str',
-                            action='store_true',
-                            default=False,
-                            help='starts with reporter')
-        parser.add_argument('--rc',
-                            dest='rc',
-                            action='store_true',
-                            default=False,
-                            help='forces re-running of converter if it is in the run chain.')
-        parser.add_argument('--rm',
-                            dest='rm',
-                            action='store_true',
-                            default=False,
-                            help='forces re-running of gene mapper if it is in the run chain.')
-        parser.add_argument('--ra',
-                            dest='ra',
-                            action='store_true',
-                            default=False,
-                            help='forces re-running of annotator if it is in the run chain.')
-        parser.add_argument('--rg',
-                            dest='rg',
-                            action='store_true',
-                            default=False,
-                            help='forces re-running of aggregator if it is in the run chain.')
-        parser.add_argument('--rp',
-                            dest='rp',
-                            action='store_true',
-                            default=False,
-                            help='forces re-running of post-aggregator if it is in the run chain.')
-        parser.add_argument('--ec',
-                            dest='ec',
-                            action='store_true',
-                            default=False,
-                            help='ends after converter.')
-        parser.add_argument('--em',
-                            dest='em',
-                            action='store_true',
-                            default=False,
-                            help='ends after gene mapper.')
-        parser.add_argument('--ea',
-                            dest='ea',
-                            action='store_true',
-                            default=False,
-                            help='ends after annotator(s).')
-        parser.add_argument('--sc',
-                            dest='sc',
-                            action='store_true',
-                            default=False,
-                            help='skips converter.')
-        parser.add_argument('--sm',
-                            dest='sm',
-                            action='store_true',
-                            default=False,
-                            help='skips gene mapper.')
-        parser.add_argument('--sa',
-                            dest='sa',
-                            action='store_true',
-                            default=False,
-                            help='skips annotators.')
-        parser.add_argument('--sg',
-                            dest='sg',
-                            action='store_true',
-                            default=False,
-                            help='skips aggregator.')
-        parser.add_argument('--sp',
-                            dest='sp',
-                            action='store_true',
-                            default=False,
-                            help='skips post-aggregator.')
-        parser.add_argument('--sr',
-                            dest='sr',
-                            action='store_true',
-                            default=False,
-                            help='skips reporter.')
-        parser.add_argument('-c',
-                            dest='conf',
-                            help='path to a conf file')
-        parser.add_argument('--cs',
-                            dest='confs',
-                            help='configuration string')
-        parser.add_argument('-v', 
-                            dest='verbose',
-                            action='store_true',
-                            default=False,
-                            help='verbose')
-        parser.add_argument('-t',
-                            nargs='+',
-                            dest='reports',
-                            help='report types. If omitted, default one in cravat.yml is used.')
-        parser.add_argument('-l',
-                            dest='liftover',
-                            choices=['hg38']+list(liftover_chain_paths.keys()),
-                            default='hg38',
-                            help='reference genome of input. CRAVAT will lift over to hg38 if needed.')
-        parser.add_argument('-x',
-                            dest='cleandb',
-                            action='store_true',
-                            help='deletes the existing result database and ' +
-                                 'creates a new one.')
+        
         self.cmd_arg_parser = parser
         self.parse_cmd_args(cmd_args)
         self.conf = ConfigLoader(job_conf_path=self.run_conf_path)
         if self.args.confs != None:
             self.conf.override_cravat_conf(
                 self.args.confs.replace("'", '"'))
+
+    def parse_cmd_args(self, cmd_args):
+        self.args = self.cmd_arg_parser.parse_args(cmd_args)
+        self.annotator_names = self.args.annotators
+        if self.annotator_names == None:
+            self.annotators = au.get_local_module_infos_of_type('annotator')
+        else:
+            self.annotators = \
+                au.get_local_module_infos_by_names(self.annotator_names)
+        self.excludes = self.args.excludes
+        if self.excludes == '*':
+            self.annotators = {}
+        elif self.excludes != None:
+            for m in self.excludes:
+                if m in self.annotators:
+                    del self.annotators[m]
+        self.input = os.path.abspath(self.args.input)
+        self.run_name = self.args.run_name
+        if self.run_name == None:
+            self.run_name = os.path.basename(self.input)
+        self.output_dir = self.args.output_dir
+        if self.output_dir == None:
+            self.output_dir = os.path.dirname(os.path.abspath(self.input))
+        else:
+            self.output_dir = os.path.abspath(self.output_dir)
+        if os.path.exists(self.output_dir) == False:
+            os.mkdir(self.output_dir)
+        self.run_conf_path = ''
+        if self.args.conf: 
+            self.run_conf_path = self.args.conf
+        self.verbose = self.args.verbose
+        self.reports = self.args.reports
+        self.input_assembly = self.args.liftover
+        self.runlevel = 0
+        if self.args.stc:
+            self.runlevel = self.runlevels['converter']
+        if self.args.stm:
+            self.runlevel = self.runlevels['mapper']
+        if self.args.sta:
+            self.runlevel = self.runlevels['annotator']
+        if self.args.stg:
+            self.runlevel = self.runlevels['aggregator']
+        if self.args.stp:
+            self.runlevel = self.runlevels['postaggregator']
+        if self.args.str:
+            self.runlevel = self.runlevels['reporter']
+        '''
+        if self.args.rc:
+            self.should_run_converter = True
+            self.should_run_genemapper = True
+            self.should_run_annotator = True
+            self.should_run_aggregator = True
+            self.should_run_reporter = True
+        if self.args.rm:
+            self.should_run_converter = False
+            self.should_run_genemapper = True
+            self.should_run_annotators = True
+            self.should_run_aggregator = True
+            self.should_run_reporter = True
+        if self.args.ra:
+            self.should_run_converter = False
+            self.should_run_genemapper = False
+            self.should_run_annotators = True
+            self.should_run_aggregator = True
+            self.should_run_reporter = True
+        '''
+        self.cleandb = self.args.cleandb
 
     def main (self):
         self.set_and_check_input_files()
@@ -255,72 +335,7 @@ class Cravat (object):
             self.run_reporter()
             rtime = time.time() - stime
             print('reporter finished in', rtime)
-    def parse_cmd_args(self, cmd_args):
-        self.args = self.cmd_arg_parser.parse_args(cmd_args)
-        self.annotator_names = self.args.annotators
-        if self.annotator_names == None:
-            self.annotators = au.get_local_module_infos_of_type('annotator')
-        else:
-            self.annotators = \
-                au.get_local_module_infos_by_names(self.annotator_names)
-        self.excludes = self.args.excludes
-        if self.excludes == '*':
-            self.annotators = {}
-        elif self.excludes != None:
-            for m in self.excludes:
-                if m in self.annotators:
-                    del self.annotators[m]
-        self.input = os.path.abspath(self.args.input)
-        self.run_name = self.args.run_name
-        if self.run_name == None:
-            self.run_name = os.path.basename(self.input)
-        self.output_dir = self.args.output_dir
-        if self.output_dir == None:
-            self.output_dir = os.path.dirname(os.path.abspath(self.input))
-        else:
-            self.output_dir = os.path.abspath(self.output_dir)
-        if os.path.exists(self.output_dir) == False:
-            os.mkdir(self.output_dir)
-        self.run_conf_path = ''
-        if self.args.conf: 
-            self.run_conf_path = self.args.conf
-        self.verbose = self.args.verbose
-        self.reports = self.args.reports
-        self.input_assembly = self.args.liftover
-        self.runlevel = 0
-        if self.args.stc:
-            self.runlevel = self.runlevels['converter']
-        if self.args.stm:
-            self.runlevel = self.runlevels['mapper']
-        if self.args.sta:
-            self.runlevel = self.runlevels['annotator']
-        if self.args.stg:
-            self.runlevel = self.runlevels['aggregator']
-        if self.args.stp:
-            self.runlevel = self.runlevels['postaggregator']
-        if self.args.str:
-            self.runlevel = self.runlevels['reporter']
-        '''
-        if self.args.rc:
-            self.should_run_converter = True
-            self.should_run_genemapper = True
-            self.should_run_annotator = True
-            self.should_run_aggregator = True
-            self.should_run_reporter = True
-        if self.args.rm:
-            self.should_run_converter = False
-            self.should_run_genemapper = True
-            self.should_run_annotators = True
-            self.should_run_aggregator = True
-            self.should_run_reporter = True
-        if self.args.ra:
-            self.should_run_converter = False
-            self.should_run_genemapper = False
-            self.should_run_annotators = True
-            self.should_run_aggregator = True
-            self.should_run_reporter = True
-        '''
-        self.cleandb = self.args.cleandb
+    
 
     def set_and_check_input_files (self):
         if self.input.split('.')[-1] == 'crv':

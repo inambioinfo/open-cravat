@@ -173,4 +173,11 @@ def get_directory_size(start_path):
             total_size += os.path.getsize(fp)
     return total_size
 
+def get_argument_parser_defaults(argument_parser):
+    return { 
+             action.dest : action.default
+             for action in argument_parser._actions
+             if action.dest != 'help'
+            }
+
 
